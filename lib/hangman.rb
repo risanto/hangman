@@ -1,39 +1,133 @@
-# When a new game is started, the script should load in the dictionary (5desk.txt) and randomly select a word between 5 and 12 characters long for the secret word.
+class Hangman
+    attr_accessor :guess_word_string, :guess_word, :ended, :incorrect_guesses, :incorrect_guesses_limit, :won
 
-dictionary = File.open("5desk.txt")
-dictionary_data = dictionary.readlines.map(&:chomp)
+    def initialize(incorrect_guesses_limit)
+        @guess_word_string
+        @guess_word = []
+        generate_word
 
-selected_words = dictionary_data.select { |str| str.length >= 5 && str.length <= 12 }
+        @incorrect_guesses = 0
+        @incorrect_guesses_limit = incorrect_guesses_limit
+        @won = false
+    end
+    
+    private
 
-random_word = selected_words.shuffle[0]
+    def generate_word
+        dictionary = File.open("5desk.txt")
+        dictionary_data = dictionary.readlines.map(&:chomp)
 
-# Do display some sort of count so the player knows how many more incorrect guesses he/she has before the game ends. You should also display which correct letters have already been chosen (and their position in the word, e.g. _ r o g r a _ _ i n g) and which incorrect letters have already been chosen.
+        selected_words = dictionary_data.select { |str| str.length >= 5 && str.length <= 12 }
+        
+        @guess_word_string = selected_words.shuffle[0].upcase
 
-game_ended = false
-incorrect = 0
-
-guess_word = Hash[random_word.split('').map { |ltr|[ltr.upcase, guessed: false] } ]
-
-def display(word)
-    result = []
-
-    word.each do |k, v|
-        v[:guessed] == false ? result << '_' : result << k
+        guess_word_string.each_char do |ltr|
+            @guess_word << [ltr, false]
+        end
     end
 
-    result.join(' ')
+    public
+
+    def still_going?
+        @incorrect_guesses < @incorrect_guesses_limit ? true : false
+    end
+
+    def all_guessed?
+        count = 0
+
+        @guess_word.each do |arr|
+            count += 1 if arr[1] == true
+        end
+
+        if count == @guess_word_string.length
+            @won = true
+            true
+        else
+            false
+        end
+    end
+
+    def guess(letter)
+        letter = letter.upcase
+        correct_guess = false
+
+        @guess_word.each do |arr|
+            if letter == arr[0]
+                correct_guess = true
+                arr[1] = true
+            end
+        end
+
+        @incorrect_guesses += 1 if !correct_guess
+    end
+
+    def show_word
+        result = []
+    
+        @guess_word.each do |arr|
+            arr[1] == false ? result << '_' : result << arr[0]
+        end
+    
+        result.join(' ')
+    end
 end
 
-# pp display(guess_word)
 
-while !game_ended do
-    puts "
-        Incorrect guesses: #{incorrect}/5
+def center_and_display(string)
+    puts "\n" * 100 + string.lines.map { |line| line.strip.center(50) }.join("\n") + "\n" * 3
+end
 
-        #{display(guess_word)}
+game = Hangman.new(5)
+
+while game.still_going? do
+
+    center_and_display("
+        ========================
+        Incorrect guesses: #{game.incorrect_guesses}/#{game.incorrect_guesses_limit}
+
+        #{game.show_word}
 
         What's your next letter?
-    "
+        ========================
+    ")
 
-    input = gets.chomp
+    input = gets.chomp.upcase
+
+    if input.length > 1 
+        center_and_display("
+            Please input only ONE letter!")
+        next
+    elsif input.length <= 0
+        center_and_display("
+            Input cannot be empty!")
+        next
+    elsif (input =~ /[[:alpha:]]/) == nil
+        center_and_display("
+            Please input a valid letter (a-z)!")
+        next
+    end
+
+    game.guess(input)
+
+    if game.all_guessed?
+        center_and_display("
+            ==========================
+            Incorrect guesses: #{game.incorrect_guesses}/#{game.incorrect_guesses_limit}
+    
+            #{game.show_word}
+    
+            CONGRATS YOU WON THE GAME!
+            ==========================
+        ")
+        break
+    end
 end
+
+center_and_display("
+    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    No attempts left!
+
+    The correct answer is #{game.guess_word_string.upcase}
+    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    "
+) if !game.won
