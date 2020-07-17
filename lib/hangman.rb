@@ -1,9 +1,11 @@
 class Hangman
-    attr_accessor :guess_word_string, :guess_word, :ended, :incorrect_guesses, :incorrect_guesses_limit, :won
+    attr_accessor :guess_word_string, :guess_word, :ended, :incorrect_guesses, :incorrect_guesses_limit, :won, :previous_correct_guesses, :previous_incorrect_guesses
 
     def initialize(incorrect_guesses_limit)
         @guess_word_string
         @guess_word = []
+        @previous_correct_guesses = []
+        @previous_incorrect_guesses = []
         generate_word
 
         @incorrect_guesses = 0
@@ -55,10 +57,14 @@ class Hangman
             if letter == arr[0]
                 correct_guess = true
                 arr[1] = true
+                @previous_correct_guesses << letter
             end
         end
-
-        @incorrect_guesses += 1 if !correct_guess
+        
+        if !correct_guess
+            @incorrect_guesses += 1
+            @previous_incorrect_guesses << letter
+        end
     end
 
     def show_word
@@ -73,8 +79,8 @@ class Hangman
 end
 
 
-def center_and_display(string)
-    puts "\n" * 100 + string.lines.map { |line| line.strip.center(50) }.join("\n") + "\n" * 3
+def center_and_display(string, newlines=1)
+    puts "\n" * newlines + string.lines.map { |line| line.strip.center(50) }.join("\n")
 end
 
 game = Hangman.new(5)
@@ -82,13 +88,13 @@ game = Hangman.new(5)
 while game.still_going? do
 
     center_and_display("
-        ========================
-        Incorrect guesses: #{game.incorrect_guesses}/#{game.incorrect_guesses_limit}
+        =========================================
+        Incorrect guesses: #{game.previous_incorrect_guesses.join(', ')} (#{game.incorrect_guesses}/#{game.incorrect_guesses_limit})
 
         #{game.show_word}
 
         What's your next letter?
-        ========================
+        =========================================
     ")
 
     input = gets.chomp.upcase
@@ -105,8 +111,12 @@ while game.still_going? do
         center_and_display("
             Please input a valid letter (a-z)!")
         next
+    elsif (game.previous_correct_guesses + game.previous_incorrect_guesses).include? input
+        center_and_display("
+            You've already inputted the letter! Pick another one.")
+        next
     end
-
+    
     game.guess(input)
 
     if game.all_guessed?
@@ -129,5 +139,10 @@ center_and_display("
 
     The correct answer is #{game.guess_word_string.upcase}
     XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    "
+    ", 10
 ) if !game.won
+
+
+# File.open('marshal.dump', 'wb') { |f| f.write(Marshal.dump(game)) }
+
+# Marshal.load(File.read('/path/to/marshal.dump'))
