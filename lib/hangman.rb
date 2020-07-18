@@ -1,5 +1,5 @@
 class Hangman
-    attr_accessor :guess_word_string, :guess_word, :ended, :incorrect_guesses, :incorrect_guesses_limit, :won, :previous_correct_guesses, :previous_incorrect_guesses
+    attr_accessor :guess_word_string, :guess_word, :ended, :incorrect_guesses, :incorrect_guesses_limit, :won, :previous_correct_guesses, :previous_incorrect_guesses, :save_dir
 
     def initialize(incorrect_guesses_limit)
         @guess_word_string
@@ -11,6 +11,8 @@ class Hangman
         @incorrect_guesses = 0
         @incorrect_guesses_limit = incorrect_guesses_limit
         @won = false
+
+        @save_dir = ''
     end
     
     private
@@ -83,23 +85,111 @@ def center_and_display(string, newlines=1)
     puts "\n" * newlines + string.lines.map { |line| line.strip.center(50) }.join("\n")
 end
 
-game = Hangman.new(5)
+def left_and_display(string, newlines=1)
+    puts "\n" * newlines + string.lines.map { |line| line.strip }.join("\n")
+end
 
-while game.still_going? do
+game_initialized = false
 
-    center_and_display("
-        =========================================
-        Incorrect guesses: #{game.previous_incorrect_guesses.join(', ')} (#{game.incorrect_guesses}/#{game.incorrect_guesses_limit})
+while !game_initialized do
+    center_and_display(
+"   ======================================================
+        Type 'NEW' if you want to start a new game
 
-        #{game.show_word}
-
-        What's your next letter?
-        =========================================
+        Type 'LOAD' if you want to continue from a saved game
+======================================================
     ")
 
     input = gets.chomp.upcase
 
-    if input.length > 1 
+    if input == 'NEW'
+        game = Hangman.new(5)
+        game_initialized = true
+        break
+    elsif input == 'LOAD'
+        save_files = Dir["saves/*"]
+        correct_input = false
+
+        if save_files.length < 1
+            center_and_display("
+                No save files found!")
+            next
+        end
+
+        while !correct_input do
+            left_and_display("
+                ================================================================
+                Which one do you want to load?  
+                
+                #{
+                    save_files.map.with_index { |file, idx| "#{idx + 1}. #{file}"}.join("\n")
+                }
+
+                (Input a number or type 'BACK' to go back to the previous menu)
+                ================================================================
+            ")
+
+            input = gets.chomp.upcase
+            picked_save_file = save_files[input.to_i - 1]
+
+            if input == 'BACK'
+                break
+            elsif picked_save_file != nil
+                game = Marshal.load(File.read("#{picked_save_file}"))
+                game_initialized = true
+                break
+            else
+                left_and_display("
+                    File not found!")
+                next
+            end
+        end
+    else
+        center_and_display("
+            No such command!")
+    end
+end
+
+while game.still_going? do
+
+    center_and_display("
+        ==================================================
+        Incorrect guesses: #{game.previous_incorrect_guesses.join(', ')} (#{game.incorrect_guesses}/#{game.incorrect_guesses_limit})
+
+        #{game.show_word}
+
+        Please input a letter
+        
+        or type 'SAVE' if you want to save your progress
+        ==================================================
+    ")
+
+    input = gets.chomp.upcase
+
+    # SAVING THE GAME
+
+    if input == 'SAVE'
+        Dir.mkdir("saves") unless Dir.exists? "saves"
+
+        save_files = Dir["saves/*"]
+
+        game.save_dir.length > 1 ? (
+            file_name = game.save_dir
+        ) : (
+            file_name = "saves/#{save_files.length + 1}.dump"
+            game.save_dir = file_name
+        )
+
+        File.open(file_name, 'wb') { |f| f.write(Marshal.dump(game)) }
+
+        center_and_display("
+            Game saved to #{file_name}!")
+
+        next
+
+    # GUESS VALIDATION
+
+    elsif input.length > 1 
         center_and_display("
             Please input only ONE letter!")
         next
@@ -141,8 +231,3 @@ center_and_display("
     XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ", 10
 ) if !game.won
-
-
-# File.open('marshal.dump', 'wb') { |f| f.write(Marshal.dump(game)) }
-
-# Marshal.load(File.read('/path/to/marshal.dump'))

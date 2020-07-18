@@ -1,0 +1,3 @@
+o:Hangman:@guess_word[[I"H:ETF[I"A;TT[I"V;TF[I"A;TT[I"N;TT[I"A;TT[I"N;TT:@previous_correct_guesses[
+I"A;T@@I"N;T@: @previous_incorrect_guesses[	I"B;TI"L;TI"C;TI"P;T:@guess_word_stringI"HAVANAN;T:@incorrect_guessesi	:@incorrect_guesses_limiti
+:	@wonF:@save_dirI"saves/1.dump;T
